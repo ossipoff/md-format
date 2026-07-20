@@ -1,7 +1,7 @@
 ---
 name: md-format
 description: |
-  Formats markdown using Prettier to fix broken tables, missing line breaks, and inconsistent spacing. Automatically checks for and installs Prettier if needed. Use when AI-generated markdown needs cleanup or when you see poorly formatted documentation.
+  Formats markdown using Prettier and linting with markdownlint-cli to fix broken tables, missing line breaks, and inconsistent spacing. Automatically installs both tools globally if needed. Use when AI-generated markdown needs cleanup or when you see poorly formatted documentation.
 keywords:
   - markdown
   - md
@@ -84,31 +84,30 @@ Use this skill when:
 
 ## Implementation
 
-### Step 1: Check for Prettier
+### Step 1: Check for Tools
 
-Before formatting, verify Prettier is available:
+The script automatically checks for both Prettier and markdownlint-cli and installs them globally if needed. It also has npx fallback if global installation fails.
 
-```bash
-if ! command -v prettier &> /dev/null; then
-    npm install -g prettier
-fi
-```
+### Step 2: Format and Lint the Markdown
 
-### Step 2: Format the Markdown
-
-Use the `prettier` CLI with the markdown parser:
+Use the Python script which handles both formatting and linting:
 
 ```bash
-# Format from stdin
-echo "# Heading" | prettier --parser markdown
+# Format and lint a file (check mode)
+python scripts/format_and_lint.py path/to/file.md
 
-# Format a file in place
-prettier --parser markdown --write path/to/file.md
+# Auto-fix issues (both Prettier formatting and markdownlint fixes)
+python scripts/format_and_lint.py --fix path/to/file.md
 ```
 
-### Step 3: Handle Missing Dependencies
+### Step 3: How It Works
 
-If Prettier is not installed, the script will automatically install it using `npm install -g prettier`.
+The script:
+1. Checks if Prettier is installed globally, installs if needed
+2. Checks if markdownlint-cli is installed globally, installs if needed
+3. Falls back to npx if global installation fails
+4. Applies Prettier formatting with markdown parser
+5. Runs markdownlint checks and auto-fixes when --fix is used
 
 ## Enhanced Features
 
@@ -117,34 +116,9 @@ If Prettier is not installed, the script will automatically install it using `np
 - **Auto-fix mode** for CI/CD pipelines
 - **Configuration support** via `.markdownlint.json` and `.prettierrc` files
 
-## Automatic Formatting Setup
+## Setup Instructions
 
-To automatically format markdown files written by the agent, set up a Claude Code hook:
-
-```bash
-#!/bin/bash
-INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.filePath // .path // empty' 2>/dev/null | grep -E '\.md$' | head -1)
-if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
-    python scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
-fi
-exit 0
-```
-
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "postWrite": [
-      {
-        "command": "~/.claude/hooks/pre-post.md-format",
-        "match": "*.md"
-      }
-    ]
-  }
-}
-```
+For automatic formatting setup instructions, see the [README.md](README.md) file.
 
 ## Triggering the Skill
 
@@ -152,4 +126,3 @@ The skill can be triggered in multiple ways:
 
 1. **Direct invocation**: `/md-format` or `/md-format <file-path>`
 2. **Python script**: `python scripts/format_and_lint.py <options> <files>`
-3. **Prettier CLI**: `npx prettier --parser markdown <file>`

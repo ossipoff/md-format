@@ -17,11 +17,10 @@ This skill fixes all of these problems automatically using Prettier, the same to
 
 ### Option 1: Install as a Claude Code Skill (Recommended)
 
-1. Copy this repository to your machine:
+1. Clone this repository to your Claude skills directory:
 
    ```bash
-   git clone https://github.com/ossipoff/md-format.git
-   cd md-format
+   git clone https://github.com/ossipoff/md-format.git ~/.claude/skills/md-format
    ```
 
 2. The skill is now ready to use! You can invoke it directly in Claude Code with `/md-format`.
@@ -71,26 +70,16 @@ It also adds missing blank lines, aligns tables, and ensures consistent spacing 
 
 Want markdown files to be formatted automatically every time you write them? Here's how:
 
-1. Create a hook script at `~/.claude/hooks/pre-post.md-format`:
+The hook script is already included in the skill repository at `hooks/pre-post.md-format`.
 
-```bash
-#!/bin/bash
-INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.filePath // .path // empty' 2>/dev/null | grep -E '\.md$' | head -1)
-if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
-    python /path/to/md-format/scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
-fi
-exit 0
-```
-
-2. Add this to your `~/.claude/settings.json`:
+1. Add this to your `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
     "postWrite": [
       {
-        "command": "~/.claude/hooks/pre-post.md-format",
+        "command": "~/.claude/skills/md-format/hooks/pre-post.md-format",
         "match": "*.md"
       }
     ]
@@ -98,7 +87,9 @@ exit 0
 }
 ```
 
-Now every time you write a `.md` file, it will be automatically formatted!
+That's it! The hook will now format any `.md` file you write using the skill's Python script.
+
+**Note:** If you installed the skill elsewhere, adjust the path accordingly.
 
 ## Examples
 
@@ -146,7 +137,7 @@ Now every time you write a `.md` file, it will be automatically formatted!
 
 ## Requirements
 
-- Node.js and npm (the script will auto-install Prettier if needed)
+- Node.js and npm (the script will auto-install Prettier and markdownlint-cli globally if needed)
 - Python 3.x
 
 ## Configuration

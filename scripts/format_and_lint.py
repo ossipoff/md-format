@@ -73,16 +73,19 @@ def ensure_tools(need_prettier: bool = True, need_lint: bool = True) -> bool:
     """Ensure required tools are installed."""
     success = True
 
-    # For prettier, try direct command first, then npx
+    # For prettier, try global installation first, then npx fallback
     if need_prettier:
         if not check_tool_installed("prettier"):
-            print("Prettier not found. Installing prettier...", file=sys.stderr)
+            print("Prettier not found. Installing prettier globally...", file=sys.stderr)
             if not install_npm_package("prettier"):
-                success = False
+                print("Warning: Will fall back to npx for Prettier", file=sys.stderr)
 
-    # markdownlint-cli is always run via npx for reliability
+    # Install markdownlint-cli globally as well
     if need_lint:
-        pass  # npx handles installation automatically
+        if not check_tool_installed("markdownlint"):
+            print("markdownlint not found. Installing markdownlint-cli globally...", file=sys.stderr)
+            if not install_npm_package("markdownlint-cli"):
+                print("Warning: Will fall back to npx for markdownlint", file=sys.stderr)
 
     return success
 
@@ -168,8 +171,8 @@ def lint_markdown(file_path: str, technical_mode: bool = False) -> tuple[bool, l
     Lint markdown file using markdownlint-cli.
     Returns (has_errors, error_list).
     """
-    # Use npx to ensure markdownlint-cli is available
-    args = ["npx", "markdownlint-cli", str(file_path)]
+    # Try direct command first, fall back to npx
+    args = ["markdownlint", str(file_path)]
 
     # In technical mode, use relaxed rules
     config_path = None
@@ -188,6 +191,17 @@ def lint_markdown(file_path: str, technical_mode: bool = False) -> tuple[bool, l
         capture_output=True,
         text=True
     )
+
+    # Fall back to npx if markdownlint not found
+    if result.returncode != 0 and ("command not found" in result.stderr.lower() or result.returncode == 127):
+        args = ["npx", "markdownlint-cli", str(file_path)]
+        if technical_mode:
+            args.extend(["--config", str(config_path)])
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True
+        )
 
     errors = []
     if result.returncode != 0:
@@ -209,8 +223,8 @@ def fix_markdownlint(file_path: str, technical_mode: bool = False) -> tuple[bool
     Fix markdown issues using markdownlint-cli --fix.
     Returns (success, error_list).
     """
-    # Use npx to ensure markdownlint-cli is available
-    args = ["npx", "markdownlint-cli", "--fix", str(file_path)]
+    # Try direct command first, fall back to npx
+    args = ["markdownlint", "--fix", str(file_path)]
 
     # In technical mode, use relaxed rules
     config_path = None
@@ -228,6 +242,17 @@ def fix_markdownlint(file_path: str, technical_mode: bool = False) -> tuple[bool
         capture_output=True,
         text=True
     )
+
+    # Fall back to npx if markdownlint not found
+    if result.returncode != 0 and ("command not found" in result.stderr.lower() or result.returncode == 127):
+        args = ["npx", "markdownlint-cli", "--fix", str(file_path)]
+        if technical_mode:
+            args.extend(["--config", str(config_path)])
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True
+        )
 
     errors = []
     if result.returncode != 0:
