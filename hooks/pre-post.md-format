@@ -1,13 +1,16 @@
 #!/bin/bash
 # Pre/post hook for markdown formatting
 # This hook runs after any Write/Edit operation on .md files
-# Place this script in ~/.claude/hooks/ or use the one in this repository
+# Install location: /home/YOUR_USERNAME/.claude/skills/md-format/hooks/pre-post.md-format
+
+# Resolve paths relative to this script's own directory (cwd may be anything when Claude Code fires us)
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Read JSON input from stdin
 INPUT=$(cat)
 
 # Extract file path using jq for reliable JSON parsing
-FILE_PATH=$(echo "$INPUT" | jq -r '.filePath // .path // empty' 2>/dev/null | grep -E '\.md$' | head -1)
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null | grep -E '\.md$' | head -1)
 
 # Only process if we found a .md file
 if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
@@ -15,7 +18,7 @@ if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
 
     # Use the skill's script to apply both Prettier formatting and markdownlint fixes
     # The script will check for .md-format-ignore file automatically
-    python scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
+    python3 "${HOOK_DIR}/../scripts/format_and_lint.py" --fix "$FILE_PATH" 2>&1 || true
 fi
 
 exit 0

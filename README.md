@@ -25,6 +25,8 @@ This skill fixes all of these problems automatically using Prettier, the same to
 
 2. The skill is now ready to use! You can invoke it directly in Claude Code with `/md-format`.
 
+**For agents:** Always trigger via `/md-format` or `python scripts/format_and_lint.py`. Do not run prettier or markdownlint-cli directly — they are internal implementation details.
+
 ### Option 2: Use the Python Script Directly
 
 If you just want to format markdown files without installing as a skill:
@@ -79,7 +81,7 @@ The hook script is already included in the skill repository at `hooks/pre-post.m
   "hooks": {
     "postWrite": [
       {
-        "command": "~/.claude/skills/md-format/hooks/pre-post.md-format",
+        "command": "/home/YOUR_USERNAME/.claude/skills/md-format/hooks/pre-post.md-format",
         "match": "*.md"
       }
     ]
@@ -89,7 +91,7 @@ The hook script is already included in the skill repository at `hooks/pre-post.m
 
 That's it! The hook will now format any `.md` file you write using the skill's Python script.
 
-**Note:** If you installed the skill elsewhere, adjust the path accordingly.
+> **Note:** Replace `YOUR_USERNAME` with your actual username. Tilde (`~`) does NOT expand inside JSON config files — you must use a full absolute path. If you installed the skill elsewhere, adjust the path accordingly.
 
 ## Examples
 

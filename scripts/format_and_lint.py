@@ -205,8 +205,8 @@ def lint_markdown(file_path: str, technical_mode: bool = False) -> tuple[bool, l
 
     errors = []
     if result.returncode != 0:
-        # Parse error output - markdownlint-cli outputs errors to stdout
-        for line in result.stdout.strip().split("\n"):
+        # Combine both streams — some tools write to one or the other depending on platform/version
+        for line in (result.stdout + "\n" + result.stderr).strip().split("\n"):
             line = line.strip()
             if line and not line.startswith("✔") and "markdownlint" not in line.lower():
                 errors.append(line)
@@ -256,7 +256,8 @@ def fix_markdownlint(file_path: str, technical_mode: bool = False) -> tuple[bool
 
     errors = []
     if result.returncode != 0:
-        for line in result.stdout.strip().split("\n"):
+        # Combine both streams — some tools write to one or the other depending on platform/version
+        for line in (result.stdout + "\n" + result.stderr).strip().split("\n"):
             line = line.strip()
             if line and not line.startswith("✔") and "markdownlint" not in line.lower():
                 errors.append(line)
@@ -369,17 +370,22 @@ def main():
                 is_clean, errors = lint_markdown(file_path, technical_mode=args.technical)
                 if not is_clean:
                     has_issues = True
-                    for error in errors[:10]:  # Show first 10 errors
-                        print(f"  {error}")
-                    if len(errors) > 10:
-                        print(f"  ... and {len(errors) - 10} more errors")
+                    # In --fix mode, defer printing until after the fix attempt so we don't show
+                    # duplicates of what got resolved vs what couldn't be auto-fixed.
+                    if not args.fix:
+                        for error in errors[:10]:  # Show first 10 errors
+                            print(f"  {error}")
+                        if len(errors) > 10:
+                            print(f"  ... and {len(errors) - 10} more errors")
 
             # Fix markdownlint issues if --fix is enabled (runs after Prettier formatting)
             if args.fix and not args.no_lint:
                 success, fix_errors = fix_markdownlint(file_path, technical_mode=args.technical)
                 if not success:
-                    print(f"  Fixed markdownlint issues in {file_path}")
-                    has_issues = False  # Issues were fixed
+                    for err in fix_errors[:5]:
+                        print(f"  Unresolved: {err}", file=sys.stderr)
+                    if len(fix_errors) > 5:
+                        print(f"  ... and {len(fix_errors) - 5} more unresolved", file=sys.stderr)
 
     else:
         # Read from stdin

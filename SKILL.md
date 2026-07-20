@@ -1,17 +1,40 @@
 ---
 name: md-format
 description: |
-  Formats markdown using Prettier and linting with markdownlint-cli to fix broken tables, missing line breaks, and inconsistent spacing. Automatically installs both tools globally if needed. Use when AI-generated markdown needs cleanup or when you see poorly formatted documentation.
+  Formats and cleans up markdown documents — fixes broken tables, missing line breaks, inconsistent spacing, trailing punctuation, and other common issues. Automatically installs both tools globally if needed. Use when AI-generated markdown needs cleanup, documentation looks messy, or you want to fix formatting in any .md file.
 keywords:
   - markdown
   - md
   - document
-  - note
+  - docs
+  - doc
   - text
   - table
   - alignment
   - broken
   - messy
+  - format
+  - formatting
+  - tidy
+  - clean
+  - style
+  - consistent
+  - whitespace
+  - spacing
+  - readable
+  - prettify
+  - pretty
+  - improve
+  - enhance
+  - write
+  - writing
+  - documentation
+  - heading
+  - list
+  - code block
+  - blank line
+  - indentation
+  - paragraph
 compatibility: claude-code opencode
 allowed-tools:
   - Bash
@@ -22,7 +45,9 @@ allowed-tools:
 
 # md-format: Markdown Formatter
 
-Formats markdown content using Prettier to fix common issues like broken tables, missing line breaks, and inconsistent spacing.
+Formats markdown content to fix common issues like broken tables, missing line breaks, and inconsistent spacing.
+
+**IMPORTANT:** Always use `python scripts/format_and_lint.py` (or `/md-format`) as your entry point. Never invoke prettier or markdownlint directly — they are implementation details hidden behind this script.
 
 ## When to Use
 
@@ -42,9 +67,17 @@ Use this skill when:
 ## Workflow
 
 1. **Identify the input** - Determine if you have raw markdown text or a file path
-2. **Choose the method** - Use appropriate approach based on input type
-3. **Format with the skill** - Run `python scripts/format_and_lint.py` (not direct prettier)
-4. **Verify results** - Check that formatting was applied correctly
+2. **Run the script** - Execute `python scripts/format_and_lint.py <options> <files>` — this is the only supported entry point
+3. **Verify results** - Check that formatting was applied correctly
+
+### Correct vs Incorrect Approaches
+
+```
+CORRECT:                          WRONG:
+python scripts/...               npx prettier ...
+/md-format                       npx markdownlint-cli ...
+                                 direct tool invocation
+```
 
 ## Examples
 
@@ -84,34 +117,27 @@ Use this skill when:
 
 ## Implementation
 
-### Step 1: Check for Tools
+The script handles everything automatically:
 
-The script automatically checks for both Prettier and markdownlint-cli and installs them globally if needed. It also has npx fallback if global installation fails.
+1. Checks for required tools and installs them globally if needed (with npx fallback)
+2. Applies Prettier formatting with markdown parser
+3. Runs markdownlint checks and auto-fixes when `--fix` is used
 
-### Step 2: Format and Lint the Markdown
+### Supported Options
 
-Use the Python script which handles both formatting and linting:
-
-```bash
-# Format and lint a file (check mode)
-python scripts/format_and_lint.py path/to/file.md
-
-# Auto-fix issues (both Prettier formatting and markdownlint fixes)
-python scripts/format_and_lint.py --fix path/to/file.md
-```
-
-### Step 3: How It Works
-
-The script:
-1. Checks if Prettier is installed globally, installs if needed
-2. Checks if markdownlint-cli is installed globally, installs if needed
-3. Falls back to npx if global installation fails
-4. Applies Prettier formatting with markdown parser
-5. Runs markdownlint checks and auto-fixes when --fix is used
+| Flag | Description |
+|------|-------------|
+| (none) | Check mode — shows what needs fixing without modifying files |
+| `--fix` | Auto-fix both formatting and linting issues |
+| `--dry-run` | Preview changes without applying them |
+| `--technical` | Relaxed line length (120 chars) for code/equations |
+| `--print-width N` | Custom line length |
+| `--no-lint` | Skip linting step |
+| `--no-format` | Skip formatting step |
 
 ## Enhanced Features
 
-- **Linting integration** with markdownlint-cli
+- **Linting integration** with markdownlint-cli (via the script)
 - **Technical mode** for documents with equations/code (120 char lines)
 - **Auto-fix mode** for CI/CD pipelines
 - **Configuration support** via `.markdownlint.json` and `.prettierrc` files
