@@ -143,6 +143,21 @@ Now every time you write a `.md` file, it will be automatically formatted!
 
 ## Configuration
 
+### Ignore Files
+
+By default, the skill will format all markdown files. If you want to skip certain files (like README.md or SKILL.md), create a `.md-format-ignore` file in your project:
+
+```bash
+# .md-format-ignore
+README.md
+SKILL.md
+*.generated.md
+```
+
+One pattern per line. Lines starting with `#` are comments. The skill checks for this file automatically when formatting.
+
+### Customize Formatting
+
 The skill uses sensible defaults, but you can customize:
 
 - Create `.prettierrc` for custom formatting rules
