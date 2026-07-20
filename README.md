@@ -5,6 +5,7 @@ A simple tool to fix messy markdown files automatically.
 ## Why Use This?
 
 When AI generates markdown or you write documentation, the output often has issues:
+
 - Tables that don't align properly
 - Missing blank lines between sections
 - Inconsistent spacing around headings
@@ -17,6 +18,7 @@ This skill fixes all of these problems automatically using Prettier, the same to
 ### Option 1: Install as a Claude Code Skill (Recommended)
 
 1. Copy this repository to your machine:
+
    ```bash
    git clone https://github.com/ossipoff/md-format.git
    cd md-format
@@ -41,6 +43,7 @@ python scripts/format_and_lint.py --fix path/to/file.md
 The skill automatically fixes common markdown problems:
 
 **Before:**
+
 ```markdown
 |Name|Age|City|
 |---|---|---|
@@ -48,6 +51,7 @@ The skill automatically fixes common markdown problems:
 ```
 
 **After:**
+
 ```markdown
 | Name | Age | City |
 | ---- | --- | ---- |
@@ -101,6 +105,7 @@ Now every time you write a `.md` file, it will be automatically formatted!
 ### Fix Broken Tables
 
 **Before:**
+
 ```markdown
 |Product|Price|Stock|
 |-------|-----|-----|
@@ -109,16 +114,18 @@ Now every time you write a `.md` file, it will be automatically formatted!
 ```
 
 **After:**
+
 ```markdown
 | Product | Price | Stock |
 | ------- | ----- | ----- |
-| Widget  |  $5   | 100   |
+| Widget  | $5    | 100   |
 | Gadget  | $10   | 50    |
 ```
 
 ### Add Missing Line Breaks
 
 **Before:**
+
 ```markdown
 # Title## Subtitle
 
@@ -127,6 +134,7 @@ Now every time you write a `.md` file, it will be automatically formatted!
 ```
 
 **After:**
+
 ```markdown
 # Title
 
@@ -159,12 +167,14 @@ One pattern per line. Lines starting with `#` are comments. The skill checks for
 ### Linting with markdownlint-cli
 
 The skill also checks your markdown for common issues using markdownlint-cli. This catches problems like:
+
 - Trailing punctuation in headings (MD026)
 - Inconsistent list numbering (MD029)
 - Line length violations (MD013)
 - And many other style issues
 
 To fix linting issues automatically, use the `--fix` flag:
+
 ```bash
 python scripts/format_and_lint.py --fix path/to/file.md
 ```
