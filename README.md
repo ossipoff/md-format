@@ -1,110 +1,85 @@
 # md-format Skill
 
-A Claude Code skill for formatting markdown using Prettier with integrated linting.
+A simple tool to fix messy markdown files automatically.
 
-## Quick Start
+## Why Use This?
+
+When AI generates markdown or you write documentation, the output often has issues:
+- Tables that don't align properly
+- Missing blank lines between sections
+- Inconsistent spacing around headings
+- Lists that look squished together
+
+This skill fixes all of these problems automatically using Prettier, the same tool used by professional developers worldwide.
+
+## Quick Installation
+
+### Option 1: Install as a Claude Code Skill (Recommended)
+
+1. Copy this repository to your machine:
+   ```bash
+   git clone https://github.com/ossipoff/md-format.git
+   cd md-format
+   ```
+
+2. The skill is now ready to use! You can invoke it directly in Claude Code with `/md-format`.
+
+### Option 2: Use the Python Script Directly
+
+If you just want to format markdown files without installing as a skill:
 
 ```bash
-# Format from stdin (check mode - no changes)
-echo "# Heading" | python scripts/format_and_lint.py
-
 # Format a file (check mode - shows what needs fixing)
 python scripts/format_and_lint.py path/to/file.md
 
-# Auto-fix and write changes
-python scripts/format_and_lint.py --fix path/to/file.md
-
-# Dry run to see changes without modifying
-python scripts/format_and_lint.py --dry-run path/to/file.md
-```
-
-## Installation
-
-This repository contains the md-format skill for formatting markdown files.
-
-## Usage
-
-### Via Bash (direct prettier command)
-
-```bash
-# Format from stdin
-echo "# Heading" | prettier --parser markdown
-
-# Format a file in place
-prettier --parser markdown --write path/to/file.md
-
-# Format and save to output
-prettier --parser markdown path/to/input.md > path/to/output.md
-```
-
-### Via Python script (Enhanced)
-
-```bash
-# Format from stdin (check mode - shows what needs fixing)
-echo "# Heading" | python scripts/format_and_lint.py
-
-# Format a file (check mode - shows what needs fixing)
-python scripts/format_and_lint.py path/to/file.md
-
-# Auto-fix and write changes
-python scripts/format_and_lint.py --fix path/to/file.md
-
-# Dry run to see changes without modifying
-python scripts/format_and_lint.py --dry-run path/to/file.md
-
-# Technical mode for docs with equations/code (120 char lines)
-python scripts/format_and_lint.py --technical path/to/file.md
-
-# Custom print width
-python scripts/format_and_lint.py --print-width 100 path/to/file.md
-
-# CI mode (exit code 1 on issues)
-python scripts/format_and_lint.py --ci path/to/file.md
-
-# Skip linting, format only
-python scripts/format_and_lint.py --no-lint path/to/file.md
-
-# Write changes explicitly
-python scripts/format_and_lint.py --write path/to/file.md
-
-# Fix both Prettier formatting and markdownlint issues
+# Auto-fix and save changes
 python scripts/format_and_lint.py --fix path/to/file.md
 ```
 
-## Features
+## What It Does
 
-- **Check-by-default**: Safe default - shows what needs fixing without modifying files
-- **Auto-installation**: Automatically installs Prettier if not found
-- **Table formatting**: Properly aligns markdown tables with consistent spacing
-- **Line break fixing**: Adds missing blank lines between elements
-- **Heading consistency**: Ensures proper spacing around headings
-- **List formatting**: Formats ordered and unordered lists correctly
-- **Linting integration**: Validates against markdownlint rules
-- **Technical mode**: Relaxed 120-char line length for code/equations
-- **Dry-run mode**: Preview changes before applying
-- **Custom print width**: Specify any line length with --print-width
+The skill automatically fixes common markdown problems:
 
-## Automatic Formatting
+**Before:**
+```markdown
+|Name|Age|City|
+|---|---|---|
+|John|25|NYC|
+```
 
-To automatically format markdown files written by the agent:
+**After:**
+```markdown
+| Name | Age | City |
+| ---- | --- | ---- |
+| John | 25  | NYC  |
+```
+
+It also adds missing blank lines, aligns tables, and ensures consistent spacing throughout your document.
+
+## How It Helps You
+
+- **Saves time**: No more manual formatting of tables and lists
+- **Improves readability**: Clean, professional-looking documentation
+- **Reduces errors**: Consistent formatting prevents mistakes
+- **Works automatically**: Set up once, forget about it
+
+## Automatic Formatting Setup
+
+Want markdown files to be formatted automatically every time you write them? Here's how:
 
 1. Create a hook script at `~/.claude/hooks/pre-post.md-format`:
 
 ```bash
 #!/bin/bash
-# Pre/post hook for markdown formatting
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | grep -o '"filePath":"[^"]*\.md"' | sed 's/"filePath":"//;s/"$//' | head -1)
-if [ -z "$FILE_PATH" ]; then
-    FILE_PATH=$(echo "$INPUT" | grep -o '"path":"[^"]*\.md"' | sed 's/"path":"//;s/"$//' | head -1)
-fi
+FILE_PATH=$(echo "$INPUT" | jq -r '.filePath // .path // empty' 2>/dev/null | grep -E '\.md$' | head -1)
 if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
-    python scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
+    python /path/to/md-format/scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
 fi
 exit 0
 ```
 
-1. Add to your `~/.claude/settings.json`:
+2. Add this to your `~/.claude/settings.json`:
 
 ```json
 {
@@ -119,45 +94,43 @@ exit 0
 }
 ```
 
+Now every time you write a `.md` file, it will be automatically formatted!
+
 ## Examples
 
-### Table Formatting Example
+### Fix Broken Tables
 
 **Before:**
-
 ```markdown
-|Name|Age|City|
-|---|---|---|
-|John|25|NYC|
-|Jane|30|LA|
+|Product|Price|Stock|
+|-------|-----|-----|
+|Widget| $5 | 100 |
+|Gadget|$10| 50 |
 ```
 
 **After:**
-
 ```markdown
-| Name | Age | City |
-| ---- | --- | ---- |
-| John | 25  | NYC  |
-| Jane | 30  | LA   |
+| Product | Price | Stock |
+| ------- | ----- | ----- |
+| Widget  |  $5   | 100   |
+| Gadget  | $10   | 50    |
 ```
 
-### Line Break Example
+### Add Missing Line Breaks
 
 **Before:**
-
 ```markdown
-# Heading## Subheading
+# Title## Subtitle
 
 - Item 1
 - Item 2
 ```
 
 **After:**
-
 ```markdown
-# Heading
+# Title
 
-## Subheading
+## Subtitle
 
 - Item 1
 - Item 2
@@ -165,24 +138,17 @@ exit 0
 
 ## Requirements
 
-- Node.js and npm (required for automatic prettier installation if not present)
-- Python 3.x (for the helper script)
-
-**Note:** If Prettier is not installed, the Python script will automatically install it using `npm install -g prettier`. The bash commands require Prettier to be pre-installed or available in your PATH.
+- Node.js and npm (the script will auto-install Prettier if needed)
+- Python 3.x
 
 ## Configuration
 
-The skill uses Prettier's default markdown settings. You can customize by:
+The skill uses sensible defaults, but you can customize:
 
-- Setting `print-width` for line wrapping
-- Using `--prose-wrap always` for text wrapping
-- Adding a `.prettierrc` file in your project for custom rules
+- Create `.prettierrc` for custom formatting rules
+- Use `--technical` flag for documents with code/equations (120 char lines)
+- Use `--print-width 100` to set custom line length
 
-For linting configuration, create a `.markdownlint.json` file:
+## Getting Help
 
-```json
-{
-  "MD013": false,
-  "default": true
-}
-```
+Run the skill directly in Claude Code with `/md-format` or check the [SKILL.md](SKILL.md) file for detailed documentation.
