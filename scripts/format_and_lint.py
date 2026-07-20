@@ -30,6 +30,12 @@ import sys
 import shutil
 from pathlib import Path
 import json
+import fnmatch
+
+
+# Constants
+DEFAULT_PRINT_WIDTH = 80
+TECHNICAL_PRINT_WIDTH = 120
 
 
 def check_tool_installed(tool_name: str) -> bool:
@@ -71,7 +77,8 @@ def ensure_tools(need_prettier: bool = True, need_lint: bool = True) -> bool:
     if need_prettier:
         if not check_tool_installed("prettier"):
             print("Prettier not found. Installing prettier...", file=sys.stderr)
-            install_npm_package("prettier")
+            if not install_npm_package("prettier"):
+                success = False
 
     # markdownlint-cli is always run via npx for reliability
     if need_lint:
@@ -105,7 +112,6 @@ def should_ignore_file(file_path: str) -> bool:
 
                         # Check if filename matches the pattern
                         # Support glob-style patterns
-                        import fnmatch
                         if fnmatch.fnmatch(filename, line) or fnmatch.fnmatch(str(path), '*' + line):
                             return True
             except Exception as e:
@@ -127,7 +133,7 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
         args.extend(["--print-width", str(print_width)])
     elif technical_mode:
         # In technical mode, allow longer lines for equations and code
-        args.extend(["--print-width", "120"])
+        args.extend(["--print-width", str(TECHNICAL_PRINT_WIDTH)])
 
     result = subprocess.run(
         args,
@@ -142,7 +148,7 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
         if print_width:
             args.extend(["--print-width", str(print_width)])
         elif technical_mode:
-            args.extend(["--print-width", "120"])
+            args.extend(["--print-width", str(TECHNICAL_PRINT_WIDTH)])
         result = subprocess.run(
             args,
             input=text,

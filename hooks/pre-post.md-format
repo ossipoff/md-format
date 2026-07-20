@@ -6,13 +6,8 @@
 # Read JSON input from stdin
 INPUT=$(cat)
 
-# Extract file path from JSON - Claude Code passes tool call details
-FILE_PATH=$(echo "$INPUT" | grep -o '"filePath":"[^"]*\.md"' | sed 's/"filePath":"//;s/"$//' | head -1)
-
-# If no filePath found, try path field (for some operations)
-if [ -z "$FILE_PATH" ]; then
-    FILE_PATH=$(echo "$INPUT" | grep -o '"path":"[^"]*\.md"' | sed 's/"path":"//;s/"$//' | head -1)
-fi
+# Extract file path using jq for reliable JSON parsing
+FILE_PATH=$(echo "$INPUT" | jq -r '.filePath // .path // empty' 2>/dev/null | grep -E '\.md$' | head -1)
 
 # Only process if we found a .md file
 if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
