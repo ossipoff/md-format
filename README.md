@@ -156,6 +156,21 @@ SKILL.md
 
 One pattern per line. Lines starting with `#` are comments. The skill checks for this file automatically when formatting.
 
+### Linting with markdownlint-cli
+
+The skill also checks your markdown for common issues using markdownlint-cli. This catches problems like:
+- Trailing punctuation in headings (MD026)
+- Inconsistent list numbering (MD029)
+- Line length violations (MD013)
+- And many other style issues
+
+To fix linting issues automatically, use the `--fix` flag:
+```bash
+python scripts/format_and_lint.py --fix path/to/file.md
+```
+
+This runs both Prettier formatting AND markdownlint fixes in one command.
+
 ### Customize Formatting
 
 The skill uses sensible defaults, but you can customize:
