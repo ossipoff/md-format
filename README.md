@@ -20,7 +20,7 @@ python scripts/format_and_lint.py --dry-run path/to/file.md
 
 ## Installation
 
-The skill is located at `/home/doj/.claude/skills/md-format/`.
+This repository contains the md-format skill for formatting markdown files.
 
 ## Usage
 
@@ -92,10 +92,16 @@ To automatically format markdown files written by the agent:
 
 ```bash
 #!/bin/bash
-FILE_PATH="$1"
-if [[ "$FILE_PATH" == *.md ]]; then
-    npx prettier --parser markdown --print-width 120 "$FILE_PATH" --write
+# Pre/post hook for markdown formatting
+INPUT=$(cat)
+FILE_PATH=$(echo "$INPUT" | grep -o '"filePath":"[^"]*\.md"' | sed 's/"filePath":"//;s/"$//' | head -1)
+if [ -z "$FILE_PATH" ]; then
+    FILE_PATH=$(echo "$INPUT" | grep -o '"path":"[^"]*\.md"' | sed 's/"path":"//;s/"$//' | head -1)
 fi
+if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
+    python scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
+fi
+exit 0
 ```
 
 1. Add to your `~/.claude/settings.json`:
@@ -115,22 +121,46 @@ fi
 
 ## Examples
 
-### Before
+### Table Formatting Example
+
+**Before:**
 
 ```markdown
-| Name | Age |
-| ---- | --- |
-| John | 25  |
-| Jane | 30  |
+|Name|Age|City|
+|---|---|---|
+|John|25|NYC|
+|Jane|30|LA|
 ```
 
-### After
+**After:**
 
 ```markdown
-| Name | Age |
-| ---- | --- |
-| John | 25  |
-| Jane | 30  |
+| Name | Age | City |
+| ---- | --- | ---- |
+| John | 25  | NYC  |
+| Jane | 30  | LA   |
+```
+
+### Line Break Example
+
+**Before:**
+
+```markdown
+# Heading## Subheading
+
+- Item 1
+- Item 2
+```
+
+**After:**
+
+```markdown
+# Heading
+
+## Subheading
+
+- Item 1
+- Item 2
 ```
 
 ## Requirements

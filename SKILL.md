@@ -250,10 +250,16 @@ Create a hook script at `~/.claude/hooks/pre-post.md-format`:
 
 ```bash
 #!/bin/bash
-FILE_PATH="$1"
-if [[ "$FILE_PATH" == *.md ]]; then
-    npx prettier --parser markdown --print-width 120 "$FILE_PATH" --write
+# Pre/post hook for markdown formatting
+INPUT=$(cat)
+FILE_PATH=$(echo "$INPUT" | grep -o '"filePath":"[^"]*\.md"' | sed 's/"filePath":"//;s/"$//' | head -1)
+if [ -z "$FILE_PATH" ]; then
+    FILE_PATH=$(echo "$INPUT" | grep -o '"path":"[^"]*\.md"' | sed 's/"path":"//;s/"$//' | head -1)
 fi
+if [ -n "$FILE_PATH" ] && [[ "$FILE_PATH" == *.md ]]; then
+    python scripts/format_and_lint.py --fix "$FILE_PATH" 2>/dev/null || true
+fi
+exit 0
 ```
 
 Then add to your `~/.claude/settings.json`:

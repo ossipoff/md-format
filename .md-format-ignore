@@ -1,0 +1,11 @@
+# md-format ignore patterns
+# One pattern per line
+# Lines starting with # are comments
+
+# Skip documentation files by default
+README.md
+SKILL.md
+
+# Add your own patterns below
+# Example: LICENSE.md
+# Example: *.generated.md

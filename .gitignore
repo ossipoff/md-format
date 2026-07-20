@@ -45,6 +45,3 @@ htmlcov/
 # Environment
 .env
 .env.local
-
-# Hook scripts (local configuration)
-hooks/

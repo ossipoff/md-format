@@ -80,6 +80,43 @@ def ensure_tools(need_prettier: bool = True, need_lint: bool = True) -> bool:
     return success
 
 
+def should_ignore_file(file_path: str) -> bool:
+    """
+    Check if a file should be ignored based on .md-format-ignore file.
+
+    Looks for .md-format-ignore in the file's directory and parent directories.
+    Returns True if the file matches any pattern in the ignore file.
+    """
+    path = Path(file_path).resolve()  # Use absolute path to handle relative paths correctly
+    filename = path.name
+
+    # Look for .md-format-ignore file starting from the file's directory
+    current_dir = path.parent
+    while current_dir != current_dir.parent:  # Stop at root
+        ignore_file = current_dir / ".md-format-ignore"
+        if ignore_file.exists():
+            try:
+                with open(ignore_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Skip empty lines and comments
+                        if not line or line.startswith('#'):
+                            continue
+
+                        # Check if filename matches the pattern
+                        # Support glob-style patterns
+                        import fnmatch
+                        if fnmatch.fnmatch(filename, line) or fnmatch.fnmatch(str(path), '*' + line):
+                            return True
+            except Exception as e:
+                print(f"Warning: Could not read {ignore_file}: {e}", file=sys.stderr)
+            break
+
+        current_dir = current_dir.parent
+
+    return False
+
+
 def format_markdown(text: str, technical_mode: bool = False, print_width: int = None) -> str:
     """Format markdown text using Prettier."""
     # Try direct prettier command first, fall back to npx
@@ -271,6 +308,11 @@ def main():
             if not path.exists():
                 print(f"File not found: {file_path}", file=sys.stderr)
                 has_issues = True
+                continue
+
+            # Check if file should be ignored
+            if should_ignore_file(file_path):
+                print(f"Skipping ignored file: {file_path}", file=sys.stderr)
                 continue
 
             content = path.read_text()
