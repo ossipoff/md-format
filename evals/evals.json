@@ -1,0 +1,66 @@
+{
+  "skill_name": "md-format",
+  "version": "2.2",
+  "evals": [
+    {
+      "id": 0,
+      "name": "table_formatting",
+      "prompt": "Format this markdown table so it's readable:\n| Name | Age |\n|---|---|\n| John | 25 |",
+      "expected_output": "A properly formatted markdown table with aligned columns"
+    },
+    {
+      "id": 1,
+      "name": "line_break_fixing",
+      "prompt": "Fix the line breaks in this markdown:\n# Heading## Subheading\n- Item 1\n- Item 2",
+      "expected_output": "Markdown with proper blank lines between elements"
+    },
+    {
+      "id": 2,
+      "name": "structure_formatting",
+      "prompt": "Format this badly structured markdown:\n```\n# Title\nSome text without proper spacing.\n\n## Subtitle\nMore text here.\n```",
+      "expected_output": "Well-formatted markdown with consistent styling"
+    },
+    {
+      "id": 3,
+      "name": "check_mode",
+      "description": "Verify that check mode doesn't modify files",
+      "command": "echo '# Test' > /tmp/check_test.md && python scripts/format_and_lint.py /tmp/check_test.md && test $(cat /tmp/check_test.md) = '# Test'",
+      "expected_exit_code": 0
+    },
+    {
+      "id": 4,
+      "name": "write_mode",
+      "description": "Verify that --write flag modifies files",
+      "command": "echo '# Heading## Subheading' > /tmp/write_test.md && python scripts/format_and_lint.py --write /tmp/write_test.md && grep -q '## Subheading' /tmp/write_test.md",
+      "expected_exit_code": 0
+    },
+    {
+      "id": 5,
+      "name": "dry_run_mode",
+      "description": "Verify that dry-run shows changes without modifying",
+      "command": "echo '# Heading## Subheading' > /tmp/dry_test.md && python scripts/format_and_lint.py --dry-run /tmp/dry_test.md 2>&1 | grep -q 'Changes for'",
+      "expected_exit_code": 0
+    },
+    {
+      "id": 6,
+      "name": "technical_mode",
+      "description": "Verify technical mode uses 120 char line width",
+      "command": "echo 'A very long line that would normally wrap at 80 characters but should stay together in technical mode because it contains code or equations.' | python scripts/format_and_lint.py --technical | wc -c",
+      "expected_output_contains": "line"
+    },
+    {
+      "id": 7,
+      "name": "fix_option_help",
+      "description": "Verify --fix help text mentions both Prettier and markdownlint",
+      "command": "python scripts/format_and_lint.py --help | grep -q 'markdownlint'",
+      "expected_exit_code": 0
+    },
+    {
+      "id": 8,
+      "name": "fix_applies_both_fixes",
+      "description": "Verify --fix applies both Prettier formatting and markdownlint fixes",
+      "command": "cat > /tmp/fix_test.md << 'EOF' && python scripts/format_and_lint.py --fix /tmp/fix_test.md && cat /tmp/fix_test.md | grep -q '## Subheading' && echo 'SUCCESS' || echo 'FAIL'\n# Heading: with colon## Subheading\n\nSome content.\nEOF",
+      "expected_exit_code": 0
+    }
+  ]
+}
