@@ -28,6 +28,7 @@ Usage:
 import subprocess
 import sys
 import shutil
+import tempfile
 from pathlib import Path
 import json
 import fnmatch
@@ -43,6 +44,17 @@ def check_tool_installed(tool_name: str) -> bool:
     return shutil.which(tool_name) is not None
 
 
+def resolve_tool(tool_name: str) -> str:
+    """
+    Resolve a tool name to a full path.
+
+    On Windows, npm installs CLIs as .cmd/.ps1 shims. CreateProcess only resolves
+    bare names against .exe, so subprocess.run(["prettier", ...]) raises
+    FileNotFoundError. shutil.which honours PATHEXT and returns the shim.
+    """
+    return shutil.which(tool_name) or tool_name
+
+
 def install_npm_package(package: str) -> bool:
     """Install an npm package globally."""
     print(f"Installing {package}...", file=sys.stderr)
@@ -53,9 +65,10 @@ def install_npm_package(package: str) -> bool:
 
     try:
         result = subprocess.run(
-            ["npm", "install", "-g", package],
+            [shutil.which("npm") or "npm", "install", "-g", package],
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8"
         )
 
         if result.returncode == 0:
@@ -106,7 +119,7 @@ def should_ignore_file(file_path: str) -> bool:
         ignore_file = current_dir / ".md-format-ignore"
         if ignore_file.exists():
             try:
-                with open(ignore_file, 'r') as f:
+                with open(ignore_file, 'r', encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         # Skip empty lines and comments
@@ -129,7 +142,7 @@ def should_ignore_file(file_path: str) -> bool:
 def format_markdown(text: str, technical_mode: bool = False, print_width: int = None) -> str:
     """Format markdown text using Prettier."""
     # Try direct prettier command first, fall back to npx
-    args = ["prettier", "--parser", "markdown"]
+    args = [resolve_tool("prettier"), "--parser", "markdown"]
 
     # Set print width based on mode or explicit value
     if print_width:
@@ -142,12 +155,13 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
         args,
         input=text,
         capture_output=True,
-        text=True
+        text=True,
+        encoding="utf-8"
     )
 
     # Fall back to npx if prettier not found
-    if result.returncode != 0 and "command not found" in result.stderr.lower():
-        args = ["npx", "prettier", "--parser", "markdown"]
+    if result.returncode != 0 and "command not found" in (result.stderr or "").lower():
+        args = [resolve_tool("npx"), resolve_tool("prettier"), "--parser", "markdown"]
         if print_width:
             args.extend(["--print-width", str(print_width)])
         elif technical_mode:
@@ -156,7 +170,8 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
             args,
             input=text,
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8"
         )
 
     if result.returncode != 0:
@@ -172,7 +187,7 @@ def lint_markdown(file_path: str, technical_mode: bool = False) -> tuple[bool, l
     Returns (has_errors, error_list).
     """
     # Try direct command first, fall back to npx
-    args = ["markdownlint", str(file_path)]
+    args = [resolve_tool("markdownlint"), str(file_path)]
 
     # In technical mode, use relaxed rules
     config_path = None
@@ -182,25 +197,29 @@ def lint_markdown(file_path: str, technical_mode: bool = False) -> tuple[bool, l
             "MD013": False,  # Disable line length rule
             "MD033": False,  # Allow inline HTML
         }
-        config_path = Path(file_path).parent / ".markdownlint-tmp.json"
+        # Keep the temp config out of the user's repo so an interrupted run
+        # cannot leave a stray dotfile behind next to their markdown.
+        config_path = Path(tempfile.gettempdir()) / ".markdownlint-tmp.json"
         config_path.write_text(json.dumps(config))
         args.extend(["--config", str(config_path)])
 
     result = subprocess.run(
         args,
         capture_output=True,
-        text=True
+        text=True,
+        encoding="utf-8"
     )
 
     # Fall back to npx if markdownlint not found
     if result.returncode != 0 and ("command not found" in result.stderr.lower() or result.returncode == 127):
-        args = ["npx", "markdownlint-cli", str(file_path)]
+        args = [resolve_tool("npx"), resolve_tool("markdownlint-cli"), str(file_path)]
         if technical_mode:
             args.extend(["--config", str(config_path)])
         result = subprocess.run(
             args,
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8"
         )
 
     errors = []
@@ -224,7 +243,7 @@ def fix_markdownlint(file_path: str, technical_mode: bool = False) -> tuple[bool
     Returns (success, error_list).
     """
     # Try direct command first, fall back to npx
-    args = ["markdownlint", "--fix", str(file_path)]
+    args = [resolve_tool("markdownlint"), "--fix", str(file_path)]
 
     # In technical mode, use relaxed rules
     config_path = None
@@ -233,25 +252,29 @@ def fix_markdownlint(file_path: str, technical_mode: bool = False) -> tuple[bool
             "MD013": False,  # Disable line length rule
             "MD033": False,  # Allow inline HTML
         }
-        config_path = Path(file_path).parent / ".markdownlint-tmp.json"
+        # Keep the temp config out of the user's repo so an interrupted run
+        # cannot leave a stray dotfile behind next to their markdown.
+        config_path = Path(tempfile.gettempdir()) / ".markdownlint-tmp.json"
         config_path.write_text(json.dumps(config))
         args.extend(["--config", str(config_path)])
 
     result = subprocess.run(
         args,
         capture_output=True,
-        text=True
+        text=True,
+        encoding="utf-8"
     )
 
     # Fall back to npx if markdownlint not found
     if result.returncode != 0 and ("command not found" in result.stderr.lower() or result.returncode == 127):
-        args = ["npx", "markdownlint-cli", "--fix", str(file_path)]
+        args = [resolve_tool("npx"), resolve_tool("markdownlint-cli"), "--fix", str(file_path)]
         if technical_mode:
             args.extend(["--config", str(config_path)])
         result = subprocess.run(
             args,
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8"
         )
 
     errors = []
@@ -277,11 +300,11 @@ def format_file(file_path: str, write: bool = False, technical_mode: bool = Fals
         print(f"File not found: {file_path}", file=sys.stderr)
         return ""
 
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8", newline="")
     formatted = format_markdown(content, technical_mode=technical_mode, print_width=print_width)
 
     if write:
-        path.write_text(formatted)
+        path.write_text(formatted, encoding="utf-8", newline="")
         print(f"Formatted: {file_path}")
 
     return formatted
@@ -347,7 +370,7 @@ def main():
                 print(f"Skipping ignored file: {file_path}", file=sys.stderr)
                 continue
 
-            content = path.read_text()
+            content = path.read_text(encoding="utf-8", newline="")
 
             # Format
             if not args.no_format:
@@ -360,7 +383,7 @@ def main():
                         print("\nFormatted:")
                         print(formatted[:500] + "..." if len(formatted) > 500 else formatted)
                     elif args.write or args.fix:
-                        path.write_text(formatted)
+                        path.write_text(formatted, encoding="utf-8", newline="")
                         print(f"Formatted: {file_path}")
                     else:
                         print(f"Formatting changes needed for: {file_path}")

@@ -1,10 +1,13 @@
 #!/bin/bash
 # Pre/post hook for markdown formatting
 # This hook runs after any Write/Edit operation on .md files
-# Install location: /home/YOUR_USERNAME/.claude/skills/md-format/hooks/pre-post.md-format
+# Install location: /home/YOUR_USERNAME/.claude/skills/md-format/hooks/md-format-hook.sh
 
 # Resolve paths relative to this script's own directory (cwd may be anything when Claude Code fires us)
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Force UTF-8 output so non-ASCII characters survive the formatter round trip.
+export PYTHONUTF8=1
 
 # Read JSON input from stdin
 INPUT=$(cat)

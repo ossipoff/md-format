@@ -72,26 +72,60 @@ It also adds missing blank lines, aligns tables, and ensures consistent spacing 
 
 Want markdown files to be formatted automatically every time you write them? Here's how:
 
-The hook script is already included in the skill repository at `hooks/pre-post.md-format`.
+The skill repository includes two hook scripts — pick the one for your platform:
 
-1. Add this to your `~/.claude/settings.json`:
+| Platform      | Hook script                             | Extra requirement |
+| ------------- | --------------------------------------- | ----------------- |
+| Linux / macOS | `hooks/md-format-hook.sh` (bash)        | `jq`              |
+| Windows       | `hooks/md-format-hook.ps1` (PowerShell) | none              |
+
+Add a `PostToolUse` hook to your `~/.claude/settings.json`.
+
+**Linux / macOS:**
 
 ```json
 {
   "hooks": {
-    "postWrite": [
+    "PostToolUse": [
       {
-        "command": "/home/YOUR_USERNAME/.claude/skills/md-format/hooks/pre-post.md-format",
-        "match": "*.md"
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/YOUR_USERNAME/.claude/skills/md-format/hooks/md-format-hook.sh"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-That's it! The hook will now format any `.md` file you write using the skill's Python script.
+**Windows:**
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File C:/Users/YOUR_USERNAME/.claude/skills/md-format/hooks/md-format-hook.ps1"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+That's it! The hook will now format any `.md` file Claude writes or edits using the skill's Python script. Both hooks read the tool payload from stdin, skip anything that isn't an existing `.md` file, and always exit 0 so a formatting failure never blocks the edit.
 
 > **Note:** Replace `YOUR_USERNAME` with your actual username. Tilde (`~`) does NOT expand inside JSON config files — you must use a full absolute path. If you installed the skill elsewhere, adjust the path accordingly.
+>
+> **Troubleshooting:** The hooks fail silently by design. If files stop getting formatted, run `python scripts/format_and_lint.py --check <file.md>` manually to see the error the hook swallowed.
 
 ## Examples
 
@@ -141,6 +175,7 @@ That's it! The hook will now format any `.md` file you write using the skill's P
 
 - Node.js and npm (the script will auto-install Prettier and markdownlint-cli globally if needed)
 - Python 3.x
+- `jq` — only for the bash hook on Linux/macOS; the Windows PowerShell hook has no extra dependencies
 
 ## Configuration
 
