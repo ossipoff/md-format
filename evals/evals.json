@@ -61,6 +61,20 @@
       "description": "Verify --fix applies both Prettier formatting and markdownlint fixes",
       "command": "cat > /tmp/fix_test.md << 'EOF' && python scripts/format_and_lint.py --fix /tmp/fix_test.md && cat /tmp/fix_test.md | grep -q '## Subheading' && echo 'SUCCESS' || echo 'FAIL'\n# Heading: with colon## Subheading\n\nSome content.\nEOF",
       "expected_exit_code": 0
+    },
+    {
+      "id": 9,
+      "name": "crlf_preservation",
+      "description": "Verify CRLF line endings are preserved through formatting (Windows regression test)",
+      "command": "printf '# Hello\\r\\n\\r\\nCRLF content.\\r\\n- Item 1\\r\\n' > /tmp/crlf_test.md && python scripts/format_and_lint.py --write /tmp/crlf_test.md && xxd /tmp/crlf_test.md | grep -q '0d0a' && echo 'CRLF preserved' || echo 'CRLF lost'",
+      "expected_exit_code": 0
+    },
+    {
+      "id": 10,
+      "name": "lf_preservation",
+      "description": "Verify LF line endings are not converted to CRLF",
+      "command": "printf '# Hello\\n\\nLF content.\\n- Item 1\\n' > /tmp/lf_test.md && python scripts/format_and_lint.py --write /tmp/lf_test.md && ! xxd /tmp/lf_test.md | grep -q '0d0a' && echo 'LF preserved (no CRLF)' || echo 'CRLF added unexpectedly'",
+      "expected_exit_code": 0
     }
   ]
 }
