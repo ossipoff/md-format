@@ -38,6 +38,11 @@ import fnmatch
 DEFAULT_PRINT_WIDTH = 80
 TECHNICAL_PRINT_WIDTH = 120
 
+# Prettier --end-of-line values
+PRETTIER_EOL_LF = "lf"
+PRETTIER_EOL_CRLF = "crlf"
+PRETTIER_EOL_CR = "cr"
+
 
 def check_tool_installed(tool_name: str) -> bool:
     """Check if a tool is installed and available."""
@@ -53,6 +58,27 @@ def resolve_tool(tool_name: str) -> str:
     FileNotFoundError. shutil.which honours PATHEXT and returns the shim.
     """
     return shutil.which(tool_name) or tool_name
+
+
+def detect_line_endings(text: str) -> str:
+    """
+    Detect the dominant line ending style in text.
+
+    Returns one of: 'crlf', 'lf', 'cr'.
+
+    Prettier defaults to CRLF on Windows, which would convert LF files to CRLF
+    if we don't tell it to preserve the original style. We detect the input's
+    line endings and pass --end-of-line to Prettier accordingly.
+    """
+    crlf_count = text.count("\r\n")
+    lf_count = text.count("\n") - crlf_count
+    cr_count = text.count("\r") - crlf_count
+
+    if crlf_count >= lf_count and crlf_count >= cr_count:
+        return PRETTIER_EOL_CRLF
+    if lf_count >= cr_count:
+        return PRETTIER_EOL_LF
+    return PRETTIER_EOL_CR
 
 
 def install_npm_package(package: str) -> bool:
@@ -140,9 +166,19 @@ def should_ignore_file(file_path: str) -> bool:
 
 
 def format_markdown(text: str, technical_mode: bool = False, print_width: int = None) -> str:
-    """Format markdown text using Prettier."""
+    """Format markdown text using Prettier.
+
+    Preserves the original file's line ending style (CRLF/LF/CR) by detecting
+    it before formatting and passing --end-of-line to Prettier. Without this,
+    Prettier on Windows defaults to CRLF and would convert LF files to CRLF.
+    """
+    # Detect original line endings from the input text (before subprocess).
+    # We must detect from input because subprocess text mode may normalize
+    # line endings in the output, making post-hoc detection unreliable.
+    original_eol = detect_line_endings(text)
+
     # Try direct prettier command first, fall back to npx
-    args = [resolve_tool("prettier"), "--parser", "markdown"]
+    args = [resolve_tool("prettier"), "--parser", "markdown", "--end-of-line", original_eol]
 
     # Set print width based on mode or explicit value
     if print_width:
@@ -161,7 +197,8 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
 
     # Fall back to npx if prettier not found
     if result.returncode != 0 and "command not found" in (result.stderr or "").lower():
-        args = [resolve_tool("npx"), resolve_tool("prettier"), "--parser", "markdown"]
+        args = [resolve_tool("npx"), resolve_tool("prettier"), "--parser", "markdown",
+                "--end-of-line", original_eol]
         if print_width:
             args.extend(["--print-width", str(print_width)])
         elif technical_mode:
@@ -178,7 +215,17 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
         print(f"Error formatting markdown: {result.stderr}", file=sys.stderr)
         return text
 
-    return result.stdout
+    formatted = result.stdout
+
+    # On some platforms (Linux), subprocess text mode normalizes CRLF to LF in
+    # the output even though Prettier wrote CRLF. Restore the original line
+    # endings so the formatted file matches the input style.
+    if original_eol == PRETTIER_EOL_CRLF and "\r" not in formatted:
+        formatted = formatted.replace("\n", "\r\n")
+    elif original_eol == PRETTIER_EOL_CR and "\r" not in formatted:
+        formatted = formatted.replace("\n", "\r")
+
+    return formatted
 
 
 def lint_markdown(file_path: str, technical_mode: bool = False) -> tuple[bool, list[str]]:
