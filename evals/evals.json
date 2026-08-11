@@ -24,7 +24,7 @@
       "id": 3,
       "name": "check_mode",
       "description": "Verify that check mode doesn't modify files",
-      "command": "echo '# Test' > /tmp/check_test.md && python scripts/format_and_lint.py /tmp/check_test.md && test $(cat /tmp/check_test.md) = '# Test'",
+      "command": "echo '# Test' > /tmp/check_test.md && python scripts/format_and_lint.py /tmp/check_test.md && test \"$(cat /tmp/check_test.md)\" = '# Test'",
       "expected_exit_code": 0
     },
     {
@@ -38,15 +38,15 @@
       "id": 5,
       "name": "dry_run_mode",
       "description": "Verify that dry-run shows changes without modifying",
-      "command": "echo '# Heading## Subheading' > /tmp/dry_test.md && python scripts/format_and_lint.py --dry-run /tmp/dry_test.md 2>&1 | grep -q 'Changes for'",
+      "command": "printf '| A | B |\\n|---|---|\\n| 1 | 2 |\\n' > /tmp/dry_test.md && python scripts/format_and_lint.py --dry-run /tmp/dry_test.md 2>&1 | grep -q 'Changes for'",
       "expected_exit_code": 0
     },
     {
       "id": 6,
       "name": "technical_mode",
-      "description": "Verify technical mode uses 120 char line width",
-      "command": "echo 'A very long line that would normally wrap at 80 characters but should stay together in technical mode because it contains code or equations.' | python scripts/format_and_lint.py --technical | wc -c",
-      "expected_output_contains": "line"
+      "description": "Verify technical mode suppresses line-length lint errors (MD013)",
+      "command": "printf '%s\\n' '# Test' '' 'This is a paragraph with a reference link [like this](https://example.com) that should be fine.' '' 'Some text with inline code and more text.' '' '| Table | Data |' '|---|---|' '| cell | cell |' > /tmp/tech_test.md && ! python scripts/format_and_lint.py --technical --no-format /tmp/tech_test.md 2>&1 | grep -q 'MD013'",
+      "expected_exit_code": 0
     },
     {
       "id": 7,
@@ -59,21 +59,21 @@
       "id": 8,
       "name": "fix_applies_both_fixes",
       "description": "Verify --fix applies both Prettier formatting and markdownlint fixes",
-      "command": "cat > /tmp/fix_test.md << 'EOF' && python scripts/format_and_lint.py --fix /tmp/fix_test.md && cat /tmp/fix_test.md | grep -q '## Subheading' && echo 'SUCCESS' || echo 'FAIL'\n# Heading: with colon## Subheading\n\nSome content.\nEOF",
+      "command": "printf '%s\\n' '# Heading: with colon## Subheading' '' 'Some content.' > /tmp/fix_test.md && python scripts/format_and_lint.py --fix /tmp/fix_test.md && grep -q '## Subheading' /tmp/fix_test.md",
       "expected_exit_code": 0
     },
     {
       "id": 9,
       "name": "crlf_preservation",
-      "description": "Verify CRLF line endings are preserved through formatting (Windows regression test)",
-      "command": "printf '# Hello\\r\\n\\r\\nCRLF content.\\r\\n- Item 1\\r\\n' > /tmp/crlf_test.md && python scripts/format_and_lint.py --write /tmp/crlf_test.md && xxd /tmp/crlf_test.md | grep -q '0d0a' && echo 'CRLF preserved' || echo 'CRLF lost'",
+      "description": "Verify CRLF files keep their line endings AND their content through formatting (Windows regression test): 8 lines in, 8 lines out, and the table delimiter row still directly follows the header",
+      "command": "printf '# Hello\\r\\n\\r\\n| A | B |\\r\\n| --- | --- |\\r\\n| 1 | 2 |\\r\\n\\r\\n- Item 1\\r\\n- Item 2\\r\\n' > /tmp/crlf_test.md && python scripts/format_and_lint.py --write /tmp/crlf_test.md && xxd /tmp/crlf_test.md | grep -q '0d0a' && [ \"$(wc -l < /tmp/crlf_test.md)\" -eq 8 ] && [ \"$(sed -n '4p' /tmp/crlf_test.md | cut -c1)\" = '|' ]",
       "expected_exit_code": 0
     },
     {
       "id": 10,
       "name": "lf_preservation",
-      "description": "Verify LF line endings are not converted to CRLF",
-      "command": "printf '# Hello\\n\\nLF content.\\n- Item 1\\n' > /tmp/lf_test.md && python scripts/format_and_lint.py --write /tmp/lf_test.md && ! xxd /tmp/lf_test.md | grep -q '0d0a' && echo 'LF preserved (no CRLF)' || echo 'CRLF added unexpectedly'",
+      "description": "Verify LF files are not converted to CRLF and keep their content: 8 lines in, 8 lines out, and the table delimiter row still directly follows the header",
+      "command": "printf '# Hello\\n\\n| A | B |\\n| --- | --- |\\n| 1 | 2 |\\n\\n- Item 1\\n- Item 2\\n' > /tmp/lf_test.md && python scripts/format_and_lint.py --write /tmp/lf_test.md && ! xxd /tmp/lf_test.md | grep -q '0d0a' && [ \"$(wc -l < /tmp/lf_test.md)\" -eq 8 ] && [ \"$(sed -n '4p' /tmp/lf_test.md | cut -c1)\" = '|' ]",
       "expected_exit_code": 0
     }
   ]

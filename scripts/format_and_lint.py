@@ -177,6 +177,14 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
     # line endings in the output, making post-hoc detection unreliable.
     original_eol = detect_line_endings(text)
 
+    # subprocess text mode wraps stdin in a TextIOWrapper with newline=None, which
+    # translates \n to os.linesep. Callers read files with newline="", so a CRLF file
+    # still holds \r\n here and reaches Prettier as \r\r\n on Windows. Prettier reads
+    # the extra \r as content and puts a blank line after every table and list row,
+    # and a table whose delimiter row is split from its header stops being a table.
+    # Feed Prettier LF only; the restore below puts the original ending back.
+    pipe_text = text.replace("\r\n", "\n").replace("\r", "\n")
+
     # Try direct prettier command first, fall back to npx
     args = [resolve_tool("prettier"), "--parser", "markdown", "--end-of-line", original_eol]
 
@@ -189,7 +197,7 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
 
     result = subprocess.run(
         args,
-        input=text,
+        input=pipe_text,
         capture_output=True,
         text=True,
         encoding="utf-8"
@@ -205,7 +213,7 @@ def format_markdown(text: str, technical_mode: bool = False, print_width: int = 
             args.extend(["--print-width", str(TECHNICAL_PRINT_WIDTH)])
         result = subprocess.run(
             args,
-            input=text,
+            input=pipe_text,
             capture_output=True,
             text=True,
             encoding="utf-8"
